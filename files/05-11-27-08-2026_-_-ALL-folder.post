@@ -1,0 +1,79 @@
+Yes. You can run the same Hadoop WordCount program on your laptop. Since you've already got Hadoop working in your terminal, you don't need to change the Java program.
+
+1. Go to your project
+cd ~/073
+
+2. Check your files
+ls
+
+
+You should have:
+
+WordCount.java
+wordcount.jar
+input.txt
+
+3. Start Hadoop
+start-dfs.sh
+start-yarn.sh
+
+
+Check:
+
+jps
+
+
+You should see:
+
+NameNode
+DataNode
+SecondaryNameNode
+ResourceManager
+NodeManager
+Jps
+
+4. Create HDFS input
+hdfs dfs -mkdir -p /home/hadoop/input
+
+
+Put your local file into HDFS:
+
+hdfs dfs -put -f input.txt /home/hadoop/input/
+
+
+Check:
+
+hdfs dfs -ls /home/hadoop/input
+
+5. Remove old output
+hdfs dfs -rm -r -f /home/hadoop/output
+
+6. Run WordCount on your laptop
+hadoop jar wordcount.jar WordCount /home/hadoop/input /home/hadoop/output
+
+
+Wait until you see:
+
+map 100% reduce 100%
+Job ... completed successfully
+
+7. See the result
+hdfs dfs -cat /home/hadoop/output/part-r-00000
+
+
+For:
+
+hello hadoop hadoop mapreduce
+
+
+you'll get approximately:
+
+hadoop  2
+hello   1
+mapreduce  1
+
+If you mean "run it without Hadoop"
+
+If by "on my laptop" you mean you want to run the Java program directly without Hadoop/HDFS/YARN, that's different. Your current WordCount.java is specifically a Hadoop MapReduce program, so it requires Hadoop.
+
+If you're doing this for your college practical, the commands you've just used are exactly the Hadoop-on-laptop workflow.
