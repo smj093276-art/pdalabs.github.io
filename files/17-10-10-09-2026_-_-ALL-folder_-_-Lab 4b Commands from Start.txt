@@ -1,0 +1,64 @@
+Lab 4b — Commands from Start to Output
+
+Run these one by one:
+
+mkdir -p ~/lab4b
+cd ~/lab4b
+
+Create the input file:
+
+cat > sample_weather.txt <<EOF
+2023 0035
+2023 0042
+2024 0038
+2024 0045
+EOF
+
+Check input:
+
+cat sample_weather.txt
+
+Create HDFS input directory:
+
+hdfs dfs -mkdir -p /weather/input
+
+Upload input:
+
+hdfs dfs -put -f sample_weather.txt /weather/input/
+
+Check:
+
+hdfs dfs -ls /weather/input
+
+Compile the Java files:
+
+rm -rf classes weather.jar
+mkdir classes
+javac -source 8 -target 8 -classpath "$(hadoop classpath)" -d classes WeatherMapper.java WeatherReducer.java WeatherDriver.java
+
+Create JAR:
+
+jar -cvf weather.jar -C classes .
+
+Remove old output:
+
+hdfs dfs -rm -r -f /weather/output
+
+Run MapReduce:
+
+hadoop jar weather.jar WeatherDriver /weather/input /weather/output
+
+Finally, directly see the output:
+
+hdfs dfs -cat /weather/output/part-r-00000
+
+Expected:
+
+2023    42
+2024    45
+
+If YARN is not running before the MapReduce command, start it with:
+
+start-dfs.sh
+start-yarn.sh
+
