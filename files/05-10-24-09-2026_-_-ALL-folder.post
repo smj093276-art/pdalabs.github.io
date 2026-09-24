@@ -1,0 +1,98 @@
+    5. Set Pig JAR
+
+    PIG_JAR=/usr/local/pig/pig-0.17.0-core-h2.jar
+
+    6. Compile UDF
+
+    javac -source 8 -target 8 \
+    -cp "$PIG_JAR:$HADOOP_HOME/share/hadoop/common/*" \
+    com/lab/pig/CleanDataUDF.java
+
+    Check:
+
+    ls -lh com/lab/pig
+
+    7. Create JAR
+
+    jar -cvf CleanDataUDF.jar com/lab/pig/CleanDataUDF.class
+    ls -lh CleanDataUDF.jar
+
+    8. Create Input CSV
+
+    mkdir -p input
+
+    cat > input/raw_logs.csv <<'EOF'
+    1,Valid user session active!!!
+    2,Purchase completed successfully!!!
+    3,!!!
+    4,
+    EOF
+
+    Check:
+
+    cat input/raw_logs.csv
+
+    9. Upload to HDFS
+
+    hdfs dfs -mkdir -p /user/hadoop/pig_input
+    hdfs dfs -put -f input/raw_logs.csv /user/hadoop/pig_input/
+    hdfs dfs -ls /user/hadoop/pig_input
+    hdfs dfs -cat /user/hadoop/pig_input/raw_logs.csv
+
+    10. Create Pig Script
+
+    cat > filter_script.pig <<'EOF'
+    REGISTER '/home/cse/pig_lab5/CleanDataUDF.jar';
+
+    raw_data = LOAD '/user/hadoop/pig_input/raw_logs.csv'
+    USING PigStorage(',')
+    AS (id:int, message:chararray);
+
+    cleaned_tuples = FOREACH raw_data GENERATE
+    id,
+    com.lab.pig.CleanDataUDF(message) AS clean_msg;
+
+    filtered_data = FILTER cleaned_tuples BY clean_msg IS NOT NULL;
+
+    STORE filtered_data INTO '/user/hadoop/pig_output'
+    USING PigStorage(',');
+    EOF
+
+    Check:
+
+    cat filter_script.pig
+
+    11. Remove Previous Output
+
+    hdfs dfs -rm -r -f /user/hadoop/pig_output
+
+    12. Run Pig
+
+    pig -x mapreduce filter_script.pig
+
+    Successful ending:
+
+    Success!
+
+    13. Check Output
+
+    hdfs dfs -ls /user/hadoop/pig_output
+
+    Expected:
+
+    _SUCCESS
+    part-m-00000
+
+    14. Display Final Output
+
+    hdfs dfs -cat /user/hadoop/pig_output/part-*
+
+    Final:
+
+    1,VALID USER SESSION ACTIVE
+    2,PURCHASE COMPLETED SUCCESSFULLY
+
+ChatGPT is AI and can make mistakes.
+
+You
+\
