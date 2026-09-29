@@ -1,0 +1,242 @@
+Perfect. Use this JAR:
+
+```
+/home/hadoop/pig/pig-0.17.0-core-h2.jar
+```
+
+ Let's execute the lab step by step.
+
+ ## 1\. Go to your lab directory
+
+```
+cd ~/pig_lab
+```
+
+ If it doesn't exist:
+
+```
+mkdir -p ~/pig_lab/com/lab/pig
+cd ~/pig_lab
+```
+
+ ## 2\. Create `CleanDataUDF.java`
+
+```
+nano com/lab/pig/CleanDataUDF.java
+```
+
+ Paste:
+
+```
+package com.lab.pig;
+
+import java.io.IOException;
+import org.apache.pig.EvalFunc;
+import org.apache.pig.data.Tuple;
+
+public class CleanDataUDF extends EvalFunc<String> {
+
+    @Override
+    public String exec(Tuple input) throws IOException {
+
+        if (input == null || input.size() == 0 || input.get(0) == null) {
+            return null;
+        }
+
+        String str = (String) input.get(0);
+
+        String cleaned = str
+                .replaceAll("[^a-zA-Z0-9 ]", "")
+                .trim()
+                .toUpperCase();
+
+        return cleaned.isEmpty() ? null : cleaned;
+    }
+}
+```
+
+ Save with **Ctrl+O**, Enter, then **Ctrl+X**.
+
+---
+
+ ## 3\. Compile it
+
+ Now use the exact JAR path you found:
+
+```
+javac -cp /home/hadoop/pig/pig-0.17.0-core-h2.jar \
+com/lab/pig/CleanDataUDF.java
+```
+
+ Check that compilation succeeded:
+
+```
+ls com/lab/pig/
+```
+
+ You should see:
+
+```
+CleanDataUDF.java
+CleanDataUDF.class
+```
+
+ If there is no error, compilation worked.
+
+---
+
+ ## 4\. Create the UDF JAR
+
+ Run:
+
+```
+jar -cvf CleanDataUDF.jar com/lab/pig/CleanDataUDF.class
+```
+
+ Verify:
+
+```
+jar -tf CleanDataUDF.jar
+```
+
+ You should get:
+
+```
+com/lab/pig/CleanDataUDF.class
+```
+
+---
+
+ ## 5\. Create the input file
+
+ Run:
+
+```
+nano raw_logs.csv
+```
+
+ For testing, put:
+
+```
+1,Valid user session active!!!
+2,Purchase completed successfully!!!
+3,@@@
+4,
+```
+
+ Save and exit.
+
+ Check it:
+
+```
+cat raw_logs.csv
+```
+
+---
+
+ ## 6\. Put the CSV into HDFS
+
+ Create the directory:
+
+```
+hdfs dfs -mkdir -p /user/hadoop/pig_input
+```
+
+ Upload the file:
+
+```
+hdfs dfs -put -f raw_logs.csv /user/hadoop/pig_input/
+```
+
+ Verify:
+
+```
+hdfs dfs -ls /user/hadoop/pig_input
+```
+
+ You should see `raw_logs.csv`.
+
+---
+
+ ## 7\. Create the Pig script
+
+```
+nano filter_script.pig
+```
+
+ Paste:
+
+```
+REGISTER 'CleanDataUDF.jar';
+
+raw_data = LOAD '/user/hadoop/pig_input/raw_logs.csv'
+    USING PigStorage(',')
+    AS (id:int, message:chararray);
+
+cleaned_tuples = FOREACH raw_data GENERATE
+    id,
+    com.lab.pig.CleanDataUDF(message) AS clean_msg;
+
+filtered_data = FILTER cleaned_tuples BY clean_msg IS NOT NULL;
+
+STORE filtered_data
+    INTO '/user/hadoop/pig_output'
+    USING PigStorage(',');
+```
+
+ Save and exit.
+
+---
+
+ ## 8\. Delete previous output
+
+ Pig will fail if `/user/hadoop/pig_output` already exists.
+
+ Run:
+
+```
+hdfs dfs -rm -r -f /user/hadoop/pig_output
+```
+
+---
+
+ ## 9\. Execute the Pig program
+
+ Now the important command:
+
+```
+pig -x mapreduce filter_script.pig
+```
+
+ Wait for the job to finish.
+
+ You should eventually see something indicating the job completed successfully.
+
+---
+
+ ## 10\. View your output
+
+ Run:
+
+```
+hdfs dfs -cat /user/hadoop/pig_output/*
+```
+
+ With the test input above, you should get:
+
+```
+1,VALID USER SESSION ACTIVE
+2,PURCHASE COMPLETED SUCCESSFULLY
+```
+
+ The `@@@` record produces an empty string, which your UDF converts to `null`, and the `FILTER` removes it.
+
+ ### If `pig -x mapreduce` gives an error
+
+ Try:
+
+```
+pig filter_script.pig
+```
+
+ If **any command gives an error**, paste the complete error message here. I can tell you exactly which command to change.
